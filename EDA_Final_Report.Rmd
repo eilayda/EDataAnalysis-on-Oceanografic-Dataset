@@ -1,0 +1,854 @@
+---
+title: "Project_Step1"
+author: "Elif İlayda Güntürk, Selin Ergül, Seda Metin"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+
+```
+
+# Data Set and Details
+
+-   CalCOFI is one of the world's longest-running and most comprehensive oceanographic datasets [1].
+    CalCOFI collects hydrographic and biological data on regular cruises.
+    The database we have selected contains measurements made with bottles containing seawater samples collected at CalCOFI stations from 1949 to the present day [1].
+    Oceanographic data includes temperature, salinity, dissolved oxygen, chlorophyll-a, nutrients and much more.
+
+-   The data has 74 variables, including the salinity scale of ocean water (Salnty), the depth at which the measurement was made (Depth), the number of bottles and casts used by CalCOFI, such as potential density, oxygen saturation, chlorophyll-a and pheopigment measurements (Cst_Cnt, Btl_Cnt), the components in the water and their values under pressure, the temperature of the water (T_degC), pH values (pH1-2).
+
+```{r}
+
+bottle <- read.csv("bottle.csv", sep = ",")
+
+summary(bottle)
+
+```
+
+## Data Summary
+
+As we mentioned, 74 variables and 800k objects.
+It was difficult to conduct meaningful data analysis.
+Therefore, in order to facilitate our analysis, we provide meaningful and interconnected variables.
+
+We collected it into a data frame.
+Variables in this data frame are T_degC, Salnty, O2ml_L, STheta, Depthm.
+
+-   **T_degC**: In this dataset, the maximum water temperature in degrees Celsius is 31.14 and the lowest temperature is 1.44.
+    There are 10963 NAs in this column.
+
+-   **Salinity (Practical Salinity Scale 1978)**: Salinity was measured in this column.
+    The lowest is 28.43 and the highest is 37.03.
+    The number of invalid data is 47354. 
+
+-   **O2ml_L**: Milliliters oxygen per liter of seawater measurements are given in this column.
+    The lowest value is -0.1 and the maximum value is 11.13.
+    The NA number is 168662.
+
+-   **STheta**: This column contains the measurement of Potential Density (Sigma Theta), Kg/M³.
+    The lowest value is 20.93 and the highest value is 250.78.
+    The total number of NAs is 52689.
+
+-   **Depthm:** Depth in meters is measured in this column.
+    The lowest value is 0 and the highest value is 5351.0.
+    There is no NA value.
+
+The reason for selecting these 5 variable in the data set is that they are compatible with each other.
+We anticipated that these data would generate meaningful graphs in regression and analysis.
+
+```{r message=FALSE}
+
+column_list <- c("T_degC", "Salnty", "O2ml_L", "STheta", "Depthm")
+
+bottle_new <- select(bottle, column_list)
+
+```
+
+-   head(): Displays the first few lines of a data frame or vector. By default, the 'head()' function displays the first six rows of the dataset, but how many rows can be displayed optionally.
+
+```{r}
+
+###We had seen the first 6 rows
+head(bottle_new) 
+
+```
+
+-   tail(): Displays the last few lines of a data frame or vector. By default, the 'tail()' function displays the last six rows of the dataset, but specifying how many rows to display is optional.
+
+```{r}
+
+###We had seen the last 6 rows 
+tail(bottle_new)
+```
+
+## Data Cleaning
+
+-   Data cleaning is the process of identifying, correcting or removing erroneous, missing or inconsistent data in a data set.
+    This process is important to achieve accurate results in data analysis because NA (not available) values can negatively affect the accuracy and reliability of the analysis.
+    The first step of data cleaning helps us identify missing values using the is.na() function.
+    In addition, the sum(is.na()) function is used to find the total number of NA values.The na.omit() function removes NA values from the data dataset.
+    The output of na.omit(data) gives a new dataset containing non-NA values.
+
+-   The duplicate function is used to ignore repeated values in the data set.
+    This eliminates the amount of deviation in the mean value because repeated data can affect the mean value.
+
+```{r}
+anyDuplicated(bottle_new)
+
+bottle_new <- distinct(bottle_new, .keep_all = TRUE)
+
+```
+
+-   When we came to NA omitting, which is another step of our data cleaning, we learned that our NA number is 2945102 with the function sum(is.na(bottle)) to learn the number of NAs in our data set. At first, we thought of replacing the NAs with means, but we preferred to omit the NAs because we had too much data.
+
+```{r}
+bottle_new <- na.omit(bottle_new)
+
+```
+
+# One Variable Analysis
+
+-   One variable analysis is used to visually understand the distribution, central tendency and variability of a single variable in a data set. In this dataset, we chose to use T_degC, Salnty, O2ml_L, Depthm variables. Since these variables have numeric values, we visualized the data using histograms. We created a frequency table within 7 variables to determine the distribution of variables in the data set, how often a particular value occurs, or the relationships between different values of the variable.
+
+## 1.Degrees of Temperature Graph
+
+```{r}
+
+ggplot(bottle_new,aes(x=T_degC))+
+  geom_histogram(bins = 50, fill="#7a67ee",color="#f0f8ff") +
+  theme(panel.background = element_rect(fill = "#e6e6fa"), plot.title = element_text(hjust = 0.5, size = 15)) +
+  ggtitle("Histogram for Degrees of Temperature")+
+  xlab("Degree Celsius")+
+  ylab("Number of Measurment")
+
+
+
+```
+
+*Fig.1: Histogram for Degrees of Temperature*
+
+-   The number of measurements is higher when the temperature is about 10 degrees Celsius. As the temperature increases, the number of measurements decreases. This inference was made using the histogram plot.
+
+Note: \`bins\` specifies the bin width to use in the histogram.
+Bins divide data values into specific intervals and show the frequency of values in each interval.
+The parameter \`bins\` determines the width of these bins.
+This can drastically change the appearance and interpretation of the histogram.
+In the first histogram we created, the bar width was "bins=30".
+After that, we changed the bins value to 50, which reduced the width of the bars.
+It made the values in the dataset more visible.
+
+```{r}
+ggplot(bottle_new, aes(y= bottle_new$T_degC)) + 
+  geom_boxplot()
+```
+
+*Fig.2: Boxplot for Degrees of Temperature*
+
+```{r}
+filtered_data <- filter(bottle_new, bottle_new$T_degC >= 6 & bottle_new$T_degC <= 20)
+
+ggplot(filtered_data,aes(x=T_degC))+
+  geom_histogram(bins = 50, fill="#7a67ee",color="#f0f8ff") +
+  theme(panel.background = element_rect(fill = "#e6e6fa"), plot.title = element_text(hjust = 0.50, size = 15)) +
+    ggtitle("Histogram for Degrees of Temperature")+
+  xlab("Degree Celsius")+
+  ylab("Number of Measurment")
+
+```
+
+## 2.Scale of Salinity Graph
+
+```{r}
+ggplot(bottle_new,aes(x=Salnty))+
+  geom_histogram(bins = 50, fill="#7a67ee",color="#f0f8ff") +
+  theme(panel.background = element_rect(fill = "#e6e6fa"), plot.title = element_text(hjust = 0.5, size = 15)) +
+  ggtitle("Histogram for Scale of Salinity") +
+ xlab("Salinity Scale")+
+ ylab("Number of Measurment")
+
+```
+
+*Fig.3: Histogram for Salinity Scale*
+
+```{r}
+ggplot(bottle_new, aes(y= bottle_new$Salnty)) + 
+  geom_boxplot()
+```
+
+*Fig.4: Boxplot for Salinity Scale*
+
+-   The data on the salinity scale is highly concentrated between 32.5 and 35, and the values outside this range are considered outliers. Therefore, they will be removed during the detailed analysis, as they may lack accuracy and skew the results.
+
+```{r}
+filtered_data <- filter(bottle_new, bottle_new$Salnty >= 32.5 & bottle_new$Salnty <= 35)
+ggplot(filtered_data,aes(x=Salnty))+
+  geom_histogram(bins = 50, fill="#7a67ee",color="#f0f8ff") +
+  theme(panel.background = element_rect(fill = "#e6e6fa"), plot.title = element_text(hjust = 0.50, size = 15)) +
+  ggtitle("Histogram for Scale of Salinity") +
+   xlab("Salinity Scale")+
+  ylab("Number of Measurment")
+```
+
+*Fig.5: New Histogram for Salinity Scale*
+
+-   When we apply outiler to the salinity scale, we can make a detailed examination in a more limited area. According to this graph, the number of measurements between 34 and 34.5 is higher than the other salinity scales. In the previous graph without outlier, we said that the measurements between 32.5 and 35 were more than the others. Since this graph is more detailed, it is more accurate.
+
+## 3.Milliliters Oxygen per liter of Seawater Graph
+
+```{r}
+ggplot(bottle_new,aes(x=O2ml_L))+
+  geom_histogram(fill="#7a67ee",color="#7a67ee") +
+  theme(panel.background = element_rect(fill = "#e6e6fa"), plot.title = element_text(hjust = 0.5, size = 15)) +
+  ggtitle("Histogram Graph for Milliliters Oxygen per liter of Seawater")+
+   xlab("Milliliters Oxygen per liter of Seawater")+
+  ylab("Number of Measurment")
+
+```
+
+*Fig.6: Histogram for Milliliters Oxygen per liter of Seawater*
+
+```{r}
+ggplot(bottle_new, aes(y= bottle_new$O2ml_L)) + 
+  geom_boxplot()
+```
+
+*Fig.7: Boxplot for Milliliters Oxygen per liter of Seawater*
+
+-   As evident in the Graph, our values show a decrease after 6 ml/O2, and we need to eliminate these outliers.
+
+```{r}
+filtered_data <- filter(bottle_new, bottle_new$O2ml_L < 6.5)
+
+ggplot(filtered_data,aes(x=O2ml_L))+
+  geom_histogram(fill="#7a67ee",color="#7a67ee") +
+  theme(panel.background = element_rect(fill = "#e6e6fa"), plot.title = element_text(hjust = 0.5, size = 15)) +
+  ggtitle("Histogram Graph for Milliliters Oxygen per liter of Seawater")
+```
+
+*Fig.8: New Histogram for Milliliters Oxygen per liter of Seawater*
+
+-   More measurements were made when the amount of oxygen per liter of seawater was 6 milliliters. After 6 milliliters the measured values decreased. 
+
+## 4.Bottle Depth in Meters Graph
+
+```{r}
+ggplot(bottle_new,aes(x=Depthm))+
+  geom_histogram(bins = 50, fill="#7a67ee",color="#f0f8ff") +
+  theme(panel.background = element_rect(fill = "#e6e6fa"), plot.title = element_text(hjust = 0.5, size = 15)) + 
+  ggtitle("Histogram for Bottle Depth in Meters")+
+  xlab("Bottle depth in meters")+
+  ylab("Number of measurment")
+
+```
+
+*Fig.9: Histogram for Bottle Depth in Meters*
+
+-   Measurements were made when the depth was 0 and 2000. As the depth approaches 0, the number of measurements is higher.
+
+```{r}
+ggplot(bottle_new, aes(y= bottle_new$Depthm)) + 
+  geom_boxplot()
+```
+
+*Fig.10: Boxplot for Bottle Depth in Meters*
+
+```{r}
+filtered_data <- filter(bottle_new, bottle_new$Depthm < 600)
+
+ggplot(filtered_data,aes(x=Depthm))+
+  geom_histogram(bins = 50, fill="#7a67ee",color="#f0f8ff") +
+  theme(panel.background = element_rect(fill = "#e6e6fa"), plot.title = element_text(hjust = 0.5, size = 15)) +
+  ggtitle("Histogram for Bottle Depth in Meters")+
+  xlab("Bottle depth in meters")+
+  ylab("Number of measurment")
+
+```
+
+*Fig.11: New Histogram for Bottle Depth in Meters*
+
+## 5.Potential Density
+
+```{r}
+ggplot(bottle_new,aes(x=STheta))+
+  geom_histogram(bins = 50, fill="#7a67ee",color="#f0f8ff") +
+  theme(panel.background = element_rect(fill = "#e6e6fa"), plot.title = element_text(hjust = 0.5, size = 15)) + 
+  ggtitle("Histogram for Potential Density")+
+  xlab("Potential Density (Kg/M³)")+
+  ylab("Number of measurment")
+```
+
+*Fig.12: Histogram for Potential Density*
+
+```{r}
+filtered_data <- filter(bottle_new, bottle_new$STheta >= 24 & bottle_new$STheta <= 27)
+
+ggplot(filtered_data,aes(x=STheta))+
+  geom_histogram(bins = 50, fill="#7a67ee",color="#f0f8ff") +
+  theme(panel.background = element_rect(fill = "#e6e6fa"), plot.title = element_text(hjust = 0.5, size = 15)) +
+  ggtitle("Histogram for Potential Density")+
+  xlab("Potential Density (Kg/M³)")+
+  ylab("Number of measurment")
+```
+
+*Fig.13: New Histogram for Potential Density*
+
+-   Due to the residual values, filtering was done between 24 and 27 values and a graph was created again.
+
+# Two Variable Analysis
+
+Two variable analysis is used to visualize the relationship between two variables.
+The x-axis represents one variable and the y-axis represents the other variable.
+The points, lines, or columns between these values show the relationship between the two variables.
+In this two variable  analysis, we created T_degC - Salnty, T_degC - Depthm, Depthm - Salnty, O2ml_L - T_degC graphs.
+
+### 1.Temperature - Scale of Salinity
+
+```{r}
+
+ggplot(data = filtered_data, aes(x=T_degC, y=Salnty)) +
+  geom_point(color='#81E0F7')+
+  theme(panel.background = element_rect(fill = "#f2fbfa"))+
+  ggtitle("Scatterplot Graph for Temperature - Scale of Salinity")+
+  ylim(31.5,36)+
+  xlab("Temperature")+
+  ylab("Scale of Salinity")
+
+```
+
+*Fig.14: Scatterplot Graph for Temperature - Scale of Salinity*
+
+-   If the salinity scale increases, the temperature increases.
+    If the temperature decreases, the salinity scale decreases.
+    As a result, there is a linear relationship between temperature and salinity scale.
+    These variables affect each other positively.
+
+    ### 2.Depth in Meters - Temperature
+
+```{r}
+
+ggplot(data = filtered_data, aes(x=Depthm, y=T_degC)) + 
+  geom_point(color = "#CB6D51")+
+  theme(panel.background = element_rect(fill = "#fbeee6"))+
+  ggtitle("Scatterplot Graph for Depth in Meters - Temperature")+
+  
+  xlab("Depth in Meters")+
+  ylab("Temperature")
+```
+
+*Fig.15: Scatterplot Graph for Depth in Meters - Temperature*
+
+-   If the depth increases, the temperature decreases. If the depth is more than 4000, the temperature approaches 0 degrees Celsius. If the temperature increases, the depth decreases. There is an inverse relationship between these two variables. In other words, they affect each other negatively.
+
+### 3.Scale of Salinity - Depth in Meters
+
+```{r}
+ggplot(data = filtered_data, aes(x=Depthm, y=Salnty)) +
+  geom_point(color='#151B54')+
+  theme(panel.background = element_rect(fill = "#ebf5fb"))+
+  ggtitle("Scatterplot Graph for Depth in Meters - Scale of Salinity ")+
+  ylim(31.5,35.5)+
+  xlab("Depth in Meters")+
+  ylab("Scale of Salinity")
+
+```
+
+*Fig16: Scatterplot Graph for Scale of Salinity - Depth in Meters*
+
+-   The salinity scale can take any value when the depth is 0, but as seen in the graph, the measurement is at 1000 meters and above when the salinity is 34-35.  
+
+### 4.Milliliters Oxygen per liter of Seawater - Temperature
+
+```{r}
+ggplot(data = filtered_data, aes(x=T_degC, y=O2ml_L)) +
+  geom_point(color='#347C17')+
+  theme(panel.background = element_rect(fill = "#eafaf1"))+
+  ggtitle("Scatterplot Graph for Temperature - Milliliters Oxygen per liter of Seawater")+
+  xlab("Temperature")+
+  ylab("Milliliters Oxygen per liter of Seawater")
+```
+
+*Fig17: Scatterplot Graph for Temperature - Milliliters Oxygen per liter of Seawater*
+
+```{r}
+
+ggplot(data = filtered_data, aes(x=T_degC, y=O2ml_L)) +
+  geom_point(color='#7D0552')+
+  theme(panel.background = element_rect(fill = "#fbf2f9"))+
+  ylim(3, 9)+
+  xlim(10, 30)+
+  ggtitle("Scatterplot Graph for Temperature - Milliliters Oxygen per liter of Seawater")+
+  xlab("Temperature")+
+  ylab("Milliliters Oxygen per liter of Seawater")
+
+```
+
+*Fig18: Limited Scatterplot Graph for Temperature - Milliliters Oxygen per liter of Seawater*
+
+-   At temperatures of 0-10 degrees, the amount of oxygen can take values of 3, 6, and 9. In this case, it is difficult to establish a relationship between them. Therefore, we made restrictions on X and Y coordinates. We evaluated the x-axis in the range of 0 and 9. We evaluated the y-axis in the range of 10 and 30 degrees and the point graph was created. According to this graph, when the temperature increases, the amount of oxygen increases or decreases. As a result, these two variables do not affect each other. As a result of the restriction, no inverse or linear relationship was found, but visualization was made in a narrower data set.
+
+# Regression and Correlation Analysis
+
+-   Regression analysis, as a statistical technique, is a method that examines how a dependent variable is related to one or more independent variables.
+    This analysis is used to model and predict the relationship between variables.
+    Its main purpose is to understand the effect of independent variables on the dependent variable.
+
+-   Correlation of Definition The cor() function in R calculates the Pearson correlation coefficient to measure the relationship between two or more variables.
+    The Pearson correlation coefficient is a numerical measure of the linear relationship between two variables.
+    The range of values is between -1 and 1.
+    -1 indicates a complete negative relationship, 0 indicates no relationship, and 1 indicates a complete positive relationship.
+
+-   The reason why we chose temperature as the dependent variable is that we want to measure whether it is in a dependency relationship with the other independent variables, and if so, to what extent, and it is the most appropriate variable for this.
+
+### 1. Temperature - Scale of Salinity
+
+```{r}
+cor.test(bottle_new$T_degC,bottle_new$Salnty)
+
+plot(bottle_new$T_degC,bottle_new$Salnty)
+
+cor(bottle_new[1:5])
+```
+
+*Fig.19: Relationship Between Temperature - Scale of Salinity*
+
+-   The correlation coefficient of -0.5049812 shows that there is an inverse relationship between temperature and salinity variables.
+    That is, as the temperature increases, salinity decreases.
+    This relationship is quite strong because the correlation coefficient is close to -0.5.
+    P-value indicates whether the correlation coefficient is statistically significant.
+    If the p-value is less than 0.05, the correlation coefficient is considered to be statistically significant.
+    In this case, a p-value \< 2.2e-16 indicates that the correlation coefficient is statistically very significant.
+
+-   The 95% confidence interval shows the possible range of the true value of the correlation coefficient.
+    In this case, the 95% confidence interval between -0.5067761 and -0.5031821 indicates that the correlation coefficient is close to -0.5.
+
+-   As a result, it can be said that there is an inverse and quite strong relationship between temperature and salinity variables.
+    This relationship means that as the temperature increases, salinity decreases.
+
+### 2. Temperature - Milliliters Oxygen per liter of Seawater
+
+```{r}
+cor.test(bottle_new$T_degC,bottle_new$O2ml_L)
+
+plot(bottle_new$T_degC,bottle_new$O2ml_L)
+
+cor(bottle_new[1:5])
+```
+
+*Fig.20: Relationship Between Temperature - Milliliters Oxygen per liter of Seawater*
+
+-   Correlation coefficient is 0.7949021. This indicates that there is a strong positive correlation between the temperature and oxygen concentration variables. This means that as the temperature increases, the oxygen concentration also increases.
+
+### 3. Temperature - Potential Density
+
+```{r}
+cor.test(bottle_new$T_degC,bottle_new$STheta)
+
+plot(bottle_new$T_degC,bottle_new$STheta)
+
+cor(bottle_new[1:5])
+```
+
+*Fig.21: Relationship Between* *Temperature - Potential Density*
+
+-   The value of -0.9640877 indicates a very strong negative relationship between the two variables. The coefficient can take a value between -1 and +1, the closer to -1 the stronger the negative relationship, and the closer to +1 the stronger the positive relationship. A value of -0.9640877 indicates a near perfect negative correlation.
+
+### 4. Temperature - Depth
+
+```{r}
+cor.test(bottle_new$T_degC,bottle_new$Depthm)
+
+plot(bottle_new$T_degC,bottle_new$Depthm)
+
+cor(bottle_new[1:5])
+```
+
+*Fig.22: Relationship Between Temperature - Depth*
+
+-   Correlation coefficient is -0.6669926. This shows that there is a negative correlation between the two variables. That is, when one variable increases, the other variable decreases.
+
+## Linear Regression
+
+-   Linear regression establishes a linear relationship model that explains the effect of independent variables on the dependent variable.
+
+-   Dependent Variable (Y): The main variable to be predicted in the model.
+    It depends on other variables that affect the value of this variable.
+
+-   Simple Linear Regression Model: Y=β0+β1X+ϵ 23
+
+-   Independent Variables (X1, X2, ...): Variables that are expected to have an effect on the dependent variable.
+    The values of these variables are used to predict the value of the dependent variable.
+
+-   β0: Intercept term, the point where the line crosses the Y-axis.
+    β1,β2,β3,...,βn: Regression coefficients, representing the effects of the independent variable.
+    X 1,X 2,...,X n: Values of the independent variables.
+
+-   ϵ: The error term is a simplifying error term of the model that does not reflect real-world complexities.
+
+```{r}
+library(dplyr)
+model1 <- lm(T_degC ~ Depthm, data=bottle_new)
+summary(model1)
+
+coeff1 <- model1$coefficients
+intercept1 <- coeff1[1]
+slope1 = coeff1[2]
+confint(model1, level=.95)
+
+ggplot(bottle_new, aes(x=Depthm, y=T_degC)) +
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))+
+  geom_abline(intercept = intercept1, slope = slope1, color= "#371f63") 
+```
+
+*Fig.23: Temperature - Depth Graph with Slope of Model1*
+
+-   Since the p-values for both coefficients are much smaller than 0.001, we can say that there is a statistically significant relationship between depth and temperature.
+
+<!-- -->
+
+-   Multiple R-squared: Indicates that the model can explain 44.49% of the variance in temperature variability.
+
+<!-- -->
+
+-   Adjusted R-squared: Provides a more realistic estimate by correcting the R-squared value in models with many variables.
+
+<!-- -->
+
+-   Gives 95% confidence intervals for where the true values of the coefficients are likely to be.
+
+-   It can be concluded that temperature decreases in a statistically significant way as depth increases.
+
+```{r}
+ggplot(bottle_new, aes(x=Depthm, y=resid(model1)))+
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))+
+  geom_abline(intercept = 0, slope = 0, color = '#371f63')
+```
+
+*Fig.24: Depth - Residual(Model1) Graph*
+
+-   In regression analysis, the term residual refers to the difference between predicted values and observed values.
+    That is, when a regression model attempts to measure the effect of an independent variable on a dependent variable, residuals are used to assess how well that model fits real-world data.
+
+-   The distribution of the residuals is very close to a normal distribution.
+    This is a positive sign about the assumptions of the model.
+    A few small deviations can be seen in the graph.
+    These deviations indicate that the model is not perfect.
+    In conclusion, this graph shows that the model1 regression model has a good fit and its predictions are reliable.
+
+```{r}
+model2 <- lm(T_degC ~ Salnty, data=bottle_new)
+summary(model2)
+
+coeff2 <- model2$coefficients
+intercept2 <- coeff2[1]
+slope2 = coeff2[2]
+confint(model2, )
+
+ggplot(bottle_new, aes(x=Salnty, y=T_degC)) +
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))+
+  geom_abline(intercept = intercept2, slope = slope2, color="#371f63")
+```
+
+*Fig.25: Temperature - Salinity Graph with Slope Model2*
+
+-   There is a strong negative relationship between salinity and temperature. As salinity increases, temperature decreases. The model can explain about 25.57% of the change in temperature.
+
+```{r}
+ggplot(bottle_new, aes(x=Salnty, y=resid(model2)))+
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))+
+  geom_abline(intercept = 0, slope = 0, color = '#371f63')
+```
+
+*Fig.26: Salinity - Residual(Model2) Graph*
+
+-   The graph shows that the residuals are approximately normally distributed. This indicates that the model represents the data well and its predictions are reliable. The residuals are concentrated in the center of the range. This indicates that the model's predictions are generally accurate. However, the graph shows that a few residuals are outside the range. This could mean that the model makes errors in some cases. Model2 shows that the regression model represents the data well and its predictions are reliable.
+
+```{r}
+model3 <- lm(T_degC ~ O2ml_L, data=bottle_new)
+summary(model3)
+
+coeff3 <- model3$coefficients
+intercept3 <- coeff3[1]
+slope3 = coeff3[2]
+confint(model3, )
+
+ggplot(bottle_new, aes(x=O2ml_L, y=T_degC)) +
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))+
+  geom_abline(intercept = intercept3, slope = slope3, color="#371f63")
+
+
+```
+
+*Fig.27: Temperature - O2 Graph with Slope of Model3*
+
+Residual standard error: 2.562 indicates the typical error of the model.
+
+-   Multiple R-squared: 0.6319 indicates that oxygen content explains 63.19% of the temperature variability.
+
+-   Adjusted R-squared: 0.6319 is the R-squared value adjusted for model complexity.
+
+-   F-statistic: 1.133e+06 indicates that the model is statistically significant overall.
+
+There is a positive linear relationship between oxygen content and temperature.
+As the amount of oxygen increases, the temperature is expected to increase.
+
+```{r}
+ggplot(bottle_new, aes(x=O2ml_L, y=resid(model3)))+
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))+
+  geom_abline(intercept = 0, slope = 0, color = '#371F63')
+```
+
+*Fig.28: O2 - Residual(Model3) Graph*
+
+-   It shows that the residuals are approximately normally distributed. This means that the model provides a good fit. The graph also shows some deviations, which may mean that the model has difficulty in predicting some data. Overall, the graph shows that the model provides a good fit and its predictions are accurate.
+
+```{r}
+model4 <- lm(T_degC ~ STheta, data=bottle_new)
+summary(model4)
+
+coeff4 <- model4$coefficients
+intercept4 <- coeff4[1]
+slope4 = coeff4[2]
+confint(model4, )
+
+ggplot(bottle_new, aes(x=STheta, y=T_degC)) +
+    geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))+
+  geom_abline(intercept = intercept4, slope = slope4, color="#371f63")
+```
+
+*Fig.29: Temperature - Potential Density Graph with Slope of Model4*
+
+Adjusted R-squared: 0.9295: The R-squared value adjusted for the number of variables in the model is also 0.9295, which indicates a high fit.
+
+-   There is a strong, negative and linear relationship between STheta and T_degC.
+
+-   As the STheta value increases, the T_degC value is expected to decrease.
+
+-   The model can predict T_degC values with relatively high accuracy.
+
+```{r}
+ggplot(bottle_new, aes(x=STheta, y=resid(model4)))+
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))+
+    geom_abline(intercept = 0, slope = 0, color = '#371F63')
+
+```
+
+*Fig.30: Potential Density - Residual(Model4) Graph*
+
+-   The residuals show an approximately normal distribution. This indicates that the model provides a good.
+
+## Multiple Linear Model
+
+-   Multiple linear regression is a statistical model in which a dependent variable is explained by more than one independent variable. This model uses the independent variables to predict the mean of the dependent variable.
+
+```{r}
+catmodel1 <- lm( T_degC ~ Salnty + O2ml_L, data = bottle_new)
+summary(catmodel1)
+```
+
+-   Multiple R-squared: 0.7024
+
+The model explains 70.24% of the variation in T_degC.
+
+-   Adjusted R-squared: 0.7024
+
+The R-squared value adjusted for the complexity of the model indicates that the model is not over-fitting.
+
+-   F-statistic: 7.791e+05, p-value \< 2.2e-16
+
+Indicates that the model is generally significant.
+
+-   It shows that both salinity and oxygen content have a positive and significant relationship with temperature.
+
+```{r}
+catmodel2 <- lm( T_degC ~ Salnty + O2ml_L + STheta + Depthm, data = bottle_new)
+summary(catmodel2)
+```
+
+-   The p-values of all variables are much smaller than 0.001, meaning that all variables in the model are statistically significant.
+    This indicates that there are strong relationships between temperature and these variables.
+
+-   R-squared: 0.9938.
+    This is a very high value, indicating that the model can explain 99.38% of the temperature change.
+
+-   Adjusted R-squared: 0.9938.
+    This is also very high, indicating that the model is not affected by over-fitting of the data.
+
+-   The model explains the temperature quite well and it is seen that Salinity, Oxygen Content, Potential Density and Depth have significant effects on temperature.
+
+-   The model can be used to predict new temperature values.
+
+### Conclusion
+
+-   The catmodel2 is able to explain the temperature better because it includes more explanatory variables.
+-   The high R-square value and low residual standard error of the catmodel2 indicate that the model fits the observed data very well.
+-   The addition of STheta and Depthm variables to the model made a significant contribution to the prediction of temperature.
+-   The catmodel2 should be preferred over the catmodel1 in predicting temperature due to its higher explanatory power and better fit.
+
+## Transformation
+
+It is used to correct the distribution of variables in the data set or to provide model assumptions.
+These transformations may include mathematical operations such as logarithmic and square root.
+Especially in models such as regression analysis, transformations are often used to approximate the normal distribution of variables or to ensure homoscedasticity of errors.
+In addition, transformations to eliminate outliers or to make the distribution symmetric can increase the reliability of statistical analyses.
+
+```{r}
+ggplot(bottle_new, aes(x=Salnty,y=T_degC))+
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))
+
+```
+
+*Fig.31: Temperature - Salinity Graph*
+
+```{r}
+ggplot(bottle_new, aes(x=Salnty,y=sqrt(T_degC)))+
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))
+```
+
+*Fig.32: Squared Temperature - Salinity Graph*
+
+```{r}
+ggplot(bottle_new, aes(x=Salnty,y=log(T_degC)))+
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))
+```
+
+*Fig.33: Log. Temperature - Salinity Graph*
+
+```{r}
+model_1<-lm(T_degC~Salnty, data=bottle_new)
+summary(model_1)
+ggplot(bottle_new,aes(x=Salnty,y=resid(model_1)))+
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))+
+  geom_abline(intercept = 0,slope=0,color="#371F63")
+
+```
+
+*Fig.34: Temperature - Salinity Graph with Residual*
+
+```{r}
+model_2<- lm(log(T_degC)~Salnty,data=bottle_new)
+summary(model_2)
+
+
+ggplot(bottle_new,aes(x=Salnty,y=resid(model_2)))+
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))+
+  geom_abline(intercept = 0,slope=0,color="#371F63")
+ 
+```
+
+*Fig.35: Log. Temperature - Salinity Graph with Residual*
+
+```{r}
+model_3<- lm(sqrt(T_degC)~Salnty,data=bottle_new)
+summary(model_3)
+
+
+ggplot(bottle_new,aes(x=Salnty,y=resid(model_3)))+
+  geom_point(color="#7a67ee")+
+  theme(panel.background = element_rect(fill = "#f4eeff"))+
+  geom_abline(intercept = 0,slope=0,color="#371f63")
+```
+
+*Fig.36: Squared Temperature - Salinity with Residual*
+
+-   In conclusion, The fact that the logarithmic model provides the best fit indicates that the relationship between temperature and salinity is non-linear. This means that changes in salinity have a greater effect on temperature. Among the three models, the log(T_degC) \~ Salnty model provides the best fit as it has the highest R-square value and the lowest residual standard error.
+
+# Step-Wise Regression
+
+## 1. Backward Selection
+
+-   This method constructs a model starting with all variables and then tries to remove the insignificant variables from the model one by one. By looking at the AIC (Akaike Information Criterion) values, it determines which variable should be removed.
+
+```{r}
+max_model<-lm(data=bottle_new, T_degC~Salnty+O2ml_L+STheta+Depthm)
+summary(max_model)
+bw_step <- step(max_model, direction = "backward")
+summary(bw_step)
+```
+
+-   AIC: AIC is a model selection criterion that balances model fit and model complexity.
+    Lower AIC values indicate better models.
+
+-   As a result of backward selection, no variables were excluded from the model.
+    This indicates that all variables are statistically significant and important for predicting water temperature.
+
+-   The R-squared values of the model (0.9938) are very high, indicating that the model can explain a large proportion of the variance in water temperature.
+
+-   The F-statistic and p-value of the model also support that the model is statistically significant.
+
+## 2. Forward Selection
+
+-   This modeling technique is used to find the explanatory variables that best fit a model.
+    The process starts with an empty model in which no variables are included.
+    At each step, the variable that provides the best improvement when added to the model is selected.
+
+-   The improvement is usually measured by a model selection criterion such as AIC (Akaike Information Criterion).
+    Lower AIC values indicate better model fit.
+
+```{r}
+min_model <- lm(data = bottle_new, T_degC ~ 1)
+
+
+fw_step <- step(min_model, direction = "forward" , 
+                scope= list(lower = min_model, upper = max_model))
+summary(fw_step)
+```
+
+-   The initial model is empty (contains only the intercept term).
+    The AIC value is 1905589.
+
+-   The variable STheta is added because it reduces the AIC value the most (to 151251.8).
+    Salnty variable is added, further reducing the AIC value (to -964885.2).
+
+-   The variable Depthm is added, reducing the AIC value again (to -1390056).
+
+-   Finally, the variable O2ml_L is added, bringing the AIC value to its lowest level (-1455444).
+
+## 3. Both Direction
+
+-   Both Direction refers to an approach to stepwise regression in R that allows flexibility in adding and removing variables from the model. In this approach, we try to find the best model by both adding and removing variables from the model.
+
+```{r}
+both_step <- step(max_model, direction = "both")
+
+summary(both_step)
+```
+
+-   both_step \<- step(max_model, direction = "both"): This line starts the step-wise regression and finds the best model with direction "both".
+
+-   Start: AIC = -1455444: The AIC (Akaike Information Criterion) value of the initial model is -1455444.
+    AIC is a criterion used to assess model fit.
+    Lower AIC values indicate better models.
+
+-   T_degC \~ Salnty + O2ml_L + STheta + Depthm: The initial model tries to explain the variable T_degC with the variables Salnty, O2ml_L, STheta and Depthm.
+
+-   In the model comparison table, the model with the lowest AIC value (-1455444) is the initial model.
+    Therefore, step-wise regression did not make any changes in the model.
+    As a result of the step-wise regression process, the initial model was found to be the best model.
+    This model can explain T_degC variable with Salnty, O2ml_L, STheta and Depthm variables quite well (R-squared = 0.9938).
+
+##### References
+
+[1] "Bottle Database," calcofi.org.
+<https://calcofi.org/data/oceanographic-data/bottle-database/>
